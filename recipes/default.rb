@@ -38,15 +38,51 @@ directory node['kibana']['installdir'] do
   mode "0755"
 end
 
-git "#{node['kibana']['installdir']}/#{node['kibana']['branch']}" do
-  repository node['kibana']['repo']
-  reference node['kibana']['branch']
-  action :sync
-  user kibana_user
-end
 
-link "#{node['kibana']['installdir']}/current" do
-  to "#{node['kibana']['installdir']}/#{node['kibana']['branch']}"
+if node['kibana']['install_from_source']
+  git "#{node['kibana']['installdir']}/#{node['kibana']['branch']}" do
+    repository node['kibana']['repo']
+    reference node['kibana']['branch']
+    action :sync
+    user kibana_user
+  end
+
+  link "#{node['kibana']['installdir']}/current" do
+    to "#{node['kibana']['installdir']}/#{node['kibana']['branch']}/src"
+  end
+
+  link "#{node['kibana']['installdir']}/current/app/dashboards/default.json" do
+    to "logstash.json"
+    only_if { !File::symlink?("#{node['kibana']['installdir']}/current/app/dashboards/default.json") }
+  end
+#remote_file node['kibana']['remote_file'] do
+else
+  # download kibana latest
+  tar_gz = "#{node['kibana']['installdir']}/kibana.tar.gz"
+  kibana_latest = "#{node['kibana']['installdir']}/kibana-latest"
+
+  remote_file tar_gz do
+    owner kibana_user
+    source node['kibana']['remote_file']
+  end
+
+  execute "extract #{tar_gz}" do
+    command "tar xzf #{tar_gz}"
+    creates kibana_latest
+    cwd node['kibana']['installdir']
+    action :run
+  end
+
+  link "#{node['kibana']['installdir']}/current" do
+    to kibana_latest
+  end
+
+  execute "remove #{tar_gz}" do
+    command "rm #{tar_gz}"
+    action :run
+    only_if { File.exists?(tar_gz) }
+  end
+
 end
 
 template "#{node['kibana']['installdir']}/current/config.js" do
@@ -54,11 +90,6 @@ template "#{node['kibana']['installdir']}/current/config.js" do
   cookbook node['kibana']['config_cookbook']
   mode "0750"
   user kibana_user
-end
-
-link "#{node['kibana']['installdir']}/current/src/app/dashboards/default.json" do
-  to "logstash.json"
-  only_if { !File::symlink?("#{node['kibana']['installdir']}/current/src/app/dashboards/default.json") }
 end
 
 include_recipe "kibana::#{node['kibana']['webserver']}"
