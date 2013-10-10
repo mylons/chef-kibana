@@ -55,7 +55,14 @@ if node['kibana']['install_from_source']
     to "logstash.json"
     only_if { !File::symlink?("#{node['kibana']['installdir']}/current/app/dashboards/default.json") }
   end
-#remote_file node['kibana']['remote_file'] do
+
+  template "#{node['kibana']['installdir']}/current/config.js" do
+    source node['kibana']['config_template']
+    cookbook node['kibana']['config_cookbook']
+    mode "0750"
+    user kibana_user
+  end
+
 else
   # download kibana latest
   tar_gz = "#{node['kibana']['installdir']}/kibana.tar.gz"
@@ -63,6 +70,7 @@ else
 
   remote_file tar_gz do
     owner kibana_user
+    group kibana_user
     source node['kibana']['remote_file']
   end
 
@@ -75,6 +83,8 @@ else
 
   link "#{node['kibana']['installdir']}/current" do
     to kibana_latest
+    owner kibana_user
+    group kibana_user
   end
 
   execute "remove #{tar_gz}" do
@@ -85,11 +95,6 @@ else
 
 end
 
-template "#{node['kibana']['installdir']}/current/config.js" do
-  source node['kibana']['config_template']
-  cookbook node['kibana']['config_cookbook']
-  mode "0750"
-  user kibana_user
-end
+
 
 include_recipe "kibana::#{node['kibana']['webserver']}"
