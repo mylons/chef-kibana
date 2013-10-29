@@ -1,7 +1,8 @@
 default['kibana']['remote_file'] = 'https://download.elasticsearch.org/kibana/kibana/kibana-latest.tar.gz'
 default['kibana']['install_from_source'] = true
-default['kibana']['repo'] = "git://github.com/elasticsearch/kibana"
+default['kibana']['repo'] = "https://github.com/elasticsearch/kibana"
 default['kibana']['branch'] = "master"
+default['kibana']['git']['checkout'] = false
 default['kibana']['webserver'] = "nginx"
 default['kibana']['installdir'] = "/opt/kibana"
 default['kibana']['es_server'] = "127.0.0.1"
